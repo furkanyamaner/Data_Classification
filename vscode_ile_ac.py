@@ -108,7 +108,7 @@ models = [
     DecisionTreeClassifier(random_state=42),
     RandomForestClassifier(random_state=42),
     GradientBoostingClassifier(random_state=42),
-    AdaBoostClassifier(random_state=42),
+    AdaBoostClassifier(random_state=42, algorithm='SAMME'),
     GaussianNB(),
     KNeighborsClassifier(),
     Perceptron(random_state=42),
