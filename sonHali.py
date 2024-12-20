@@ -16,6 +16,7 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 # Set pandas display options
 pd.set_option('display.max_columns', None)
 pd.set_option("display.max_rows", None)
+pd.set_option('display.width', 1000)  # Yatayda daha fazla alan kullanmasını sağlar
 
 # Read data
 dFrame = pd.read_excel("Data_processed.xlsx")
@@ -173,3 +174,45 @@ print(results_df)
 results_df = results_df.sort_values(by="AUC", ascending=False)
 print("\nSorted by AUC:")
 print(results_df)
+
+# Kategorik Özellikler ile Karşılaştırma Fonksiyonu
+def evaluate_by_categorical_attributes(X, y, categorical_columns, models):
+    comparison_results = []
+    
+    # Kategorik özelliklerin kombinasyonları üzerinde dönüyoruz
+    for cat_column in categorical_columns:
+        # Categorical column'dan grup oluştur
+        grouped_data = X.groupby(cat_column)
+        
+        for group_name, group_data in grouped_data:
+            print(f"Evaluating for {cat_column}: {group_name}")
+            
+            
+            X_group = group_data
+            y_group = y[X_group.index]
+            
+            
+            for model in models:
+                print(f"Evaluating model {model.__class__.__name__} for {cat_column} = {group_name}...")
+                
+                result = evaluateModel(model, X_group, y_group)
+                result['Categorical Attribute'] = cat_column
+                result['Category Value'] = group_name
+                comparison_results.append(result)
+    
+    # Sonuçları bir DataFrame'de topla
+    comparison_df = pd.DataFrame(comparison_results)
+    return comparison_df
+
+# Kategorik özelliklere göre model değerlendirmesi yap
+categorical_columns = ['State_UP', 'State_Bihar', 'SoilType_Heavy', 'SoilType_Low', 'SoilType_Medium']
+comparison_results_df = evaluate_by_categorical_attributes(X, y, categorical_columns, models)
+
+# Sonuçları görüntüle
+print("Model Evaluation Results by Categorical Attributes:")
+print(comparison_results_df)
+
+# AUC'ye göre sıralama
+comparison_results_df_sorted = comparison_results_df.sort_values(by="AUC", ascending=False)
+print("\nSorted by AUC for Categorical Comparison:")
+print(comparison_results_df_sorted)

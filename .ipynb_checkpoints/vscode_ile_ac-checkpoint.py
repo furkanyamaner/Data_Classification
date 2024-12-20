@@ -10,9 +10,8 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import GradientBoostingClassifier, AdaBoostClassifier, RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.naive_bayes import GaussianNB
-from sklearn.feature_selection import RFE
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, roc_auc_score, f1_score, precision_score, recall_score, matthews_corrcoef
-
+from sklearn.feature_selection import RFECV
 # Set pandas display options
 pd.set_option('display.max_columns', None)
 pd.set_option("display.max_rows", None)
@@ -38,14 +37,6 @@ def changeToNumeric(dataFrame):
             # Convert categorical columns to numeric codes
             dataFrame[col] = dataFrame[col].astype('category').cat.codes
     return dataFrame
-
-# Function to perform feature selection using RFE (Recursive Feature Elimination)
-def featureSelection(model, X, y):
-    # Create the RFE model and select the top 10 features
-    rfe = RFE(model, n_features_to_select=10)
-    X_rfe = rfe.fit_transform(X, y)
-    selected_features = X.columns[rfe.support_]
-    return X_rfe, selected_features
 
 # Function to perform evaluation metrics calculation
 def evaluateModel(model, X, y):
@@ -123,8 +114,8 @@ def evaluateModel(model, X, y):
 
 # List of models to evaluate
 models = [
-    LogisticRegression(max_iter=10000, solver='liblinear', random_state=42),  # Increased max_iter and solver changed
-    SVC(random_state=42, probability=True),  # SVC with probability=True for AUC
+    LogisticRegression(random_state=42, max_iter=1000),
+    SVC(random_state=42, probability=True),
     DecisionTreeClassifier(random_state=42),
     RandomForestClassifier(random_state=42),
     GradientBoostingClassifier(random_state=42),
@@ -149,18 +140,8 @@ all_results = []
 
 # Evaluate each model and store the results
 for model in models:
-    # Feature selection (RFE) for Logistic Regression (or any other model you choose)
-    if model.__class__.__name__ == 'LogisticRegression':
-        print(f"Evaluating model {model.__class__.__name__} with feature selection...")
-        X_rfe, selected_features = featureSelection(model, X, y)
-        print(f"Selected Features: {selected_features}")
-        # Evaluate on selected features
-        result_with_fs = evaluateModel(model, pd.DataFrame(X_rfe, columns=selected_features), y)
-        all_results.append(result_with_fs)
-    else:
-        print(f"Evaluating model {model.__class__.__name__} without feature selection...")
-        result = evaluateModel(model, X, y)
-        all_results.append(result)
+    result = evaluateModel(model, X, y)
+    all_results.append(result)
 
 # Create a DataFrame to display results as a table
 results_df = pd.DataFrame(all_results)
@@ -173,3 +154,4 @@ print(results_df)
 results_df = results_df.sort_values(by="AUC", ascending=False)
 print("\nSorted by AUC:")
 print(results_df)
+
