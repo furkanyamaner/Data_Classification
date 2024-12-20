@@ -74,32 +74,43 @@ def evaluateModel(model, X, y):
             if len(np.unique(y)) == 2:
                 y_prob = 1 / (1 + np.exp(-y_prob))  # Sigmoid for binary classification
             else:
-                # For multi-class classification, you can either skip AUC or apply a softmax
-                raise ValueError("AUC for multi-class with decision_function not implemented yet.")
+                # For multi-class classification, we can use the softmax function
+                # but let's skip AUC calculation for Perceptron in multi-class case
+                y_prob = None  # Set it to None, we will not calculate AUC for multi-class models with decision_function
         
         # Calculate metrics
-        if len(np.unique(y)) > 2:  # Multi-class classification
-            auc_score = roc_auc_score(y_test, y_prob, multi_class='ovr', average='macro')  # Multi-class AUC
-        else:  # Binary classification
-            auc_score = roc_auc_score(y_test, y_prob)
+        if y_prob is not None:  # Only calculate AUC if y_prob is available
+            try:
+                if len(np.unique(y)) > 2:  # Multi-class classification
+                    auc_score = roc_auc_score(y_test, y_prob, multi_class='ovr', average='macro')  # Multi-class AUC
+                else:  # Binary classification
+                    auc_score = roc_auc_score(y_test, y_prob)
+                auc_scores.append(auc_score)
+            except ValueError:
+                # If AUC calculation fails, append NaN (e.g., in case of empty predictions or other issues)
+                auc_scores.append(np.nan)
+        else:
+            auc_scores.append(np.nan)  # If no probability estimate, append NaN
         
-        auc_scores.append(auc_score)
-        
+        # Calculate other metrics
         accuracy_scores.append(accuracy_score(y_test, y_pred))
         f1_scores.append(f1_score(y_test, y_pred, average='weighted'))
         precision_scores.append(precision_score(y_test, y_pred, average='weighted'))
         recall_scores.append(recall_score(y_test, y_pred, average='weighted'))
         mcc_scores.append(matthews_corrcoef(y_test, y_pred))
     
-    # Print the evaluation results
-    print(f"Model: {model.__class__.__name__}")
-    print(f"AUC: {np.mean(auc_scores):.4f}")
-    print(f"Accuracy (CA): {np.mean(accuracy_scores):.4f}")
-    print(f"F1-score: {np.mean(f1_scores):.4f}")
-    print(f"Precision: {np.mean(precision_scores):.4f}")
-    print(f"Recall: {np.mean(recall_scores):.4f}")
-    print(f"MCC: {np.mean(mcc_scores):.4f}")
-    print("-" * 60)
+    # Store the results for this model
+    results = {
+        "Model": model.__class__.__name__,
+        "AUC": np.nan if np.isnan(np.mean(auc_scores)) else np.mean(auc_scores),  # Handle NaN AUC
+        "Accuracy (CA)": np.mean(accuracy_scores),
+        "F1-score": np.mean(f1_scores),
+        "Precision": np.mean(precision_scores),
+        "Recall": np.mean(recall_scores),
+        "MCC": np.mean(mcc_scores)
+    }
+    
+    return results
 
 # List of models to evaluate
 models = [
@@ -124,6 +135,22 @@ dFrame = changeToNumeric(cleanedData)
 X = dFrame.drop('GrainYield', axis=1)  # Assuming 'GrainYield' is the target column
 y = dFrame['GrainYield']
 
-# Evaluate each model
+# Initialize a list to store results
+all_results = []
+
+# Evaluate each model and store the results
 for model in models:
-    evaluateModel(model, X, y)
+    result = evaluateModel(model, X, y)
+    all_results.append(result)
+
+# Create a DataFrame to display results as a table
+results_df = pd.DataFrame(all_results)
+
+# Display the results
+print("Model Evaluation Results:")
+print(results_df)
+
+# Sort by any column, by AUC
+results_df = results_df.sort_values(by="AUC", ascending=False)
+print("\nSorted by AUC:")
+print(results_df)
